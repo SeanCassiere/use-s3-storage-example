@@ -5,15 +5,15 @@ import { Router } from "express";
 import { z } from "zod";
 import { sign } from "jsonwebtoken";
 
-import { cookieJwtAuth, cookieJwtScan, TypedRequest } from "../middlewares/cookieJwt";
-import { env } from "../config/env";
-import { prisma } from "../config/prisma";
-import { s3 } from "../config/s3";
+import { cookieJwtAuth, cookieJwtScan, TypedRequest } from "./middlewares/cookieJwt";
+import { env } from "./config/env";
+import { prisma } from "./config/prisma";
+import { getS3FileStream, s3FormStorageKey, uploadS3File } from "./config/s3";
 
 const unlinkFile = util.promisify(fs.unlink);
 const upload = multer({ dest: "upload/" });
 
-export const pagesRouter = Router();
+export const router = Router();
 
 const loginSchema = z.object({
 	username: z.string(),
@@ -30,24 +30,7 @@ async function getUser(username: string) {
 	});
 }
 
-async function uploadFile(userId: string, file: Express.Multer.File) {
-	const fileStream = fs.createReadStream(file.path);
-	const ext = file.mimetype.split("/")[1];
-
-	const uploadParams = {
-		Bucket: env.AWS_BUCKET_NAME,
-		Body: fileStream,
-		Key: `${userId}/${file.filename}.${ext}`,
-	};
-
-	return s3.upload(uploadParams).promise();
-}
-
-function getFileStream(key: string) {
-	return s3.getObject({ Bucket: env.AWS_BUCKET_NAME, Key: key }).createReadStream();
-}
-
-pagesRouter
+router
 	.route("/files/proxy-upload")
 	.get(cookieJwtAuth, (req: TypedRequest, res) => {
 		if (req.user === null) {
@@ -66,7 +49,7 @@ pagesRouter
 		}
 
 		try {
-			const data = await uploadFile(req.user.id, file);
+			const data = await uploadS3File(req.user.id, file);
 			console.log("uploaded file", data);
 		} catch (error) {
 			console.log("upload failed", error);
@@ -80,16 +63,16 @@ pagesRouter
 		return res.redirect("/files");
 	});
 
-pagesRouter.route("/storage/:userId/:storageKey").get(async (req, res) => {
+router.route("/storage/:userId/:storageKey").get(async (req, res) => {
 	const userId = req.params.userId;
 	const storageKey = req.params.storageKey;
 
-	const readStream = getFileStream(`${userId}/${storageKey}`);
+	const readStream = getS3FileStream(s3FormStorageKey(userId, storageKey));
 
 	readStream.pipe(res);
 });
 
-pagesRouter.route("/files").get(cookieJwtAuth, (req: TypedRequest, res) => {
+router.route("/files").get(cookieJwtAuth, (req: TypedRequest, res) => {
 	if (req.user === null) {
 		// console.log("User not found");
 		return res.redirect("/");
@@ -101,11 +84,11 @@ pagesRouter.route("/files").get(cookieJwtAuth, (req: TypedRequest, res) => {
 	});
 });
 
-pagesRouter.get("/logout", (_, res) => {
+router.get("/logout", (_, res) => {
 	res.clearCookie("access-token").redirect("/");
 });
 
-pagesRouter
+router
 	.route("/")
 	.get(cookieJwtScan, (req: TypedRequest, res) => {
 		if (req.user && req.user.id) {
