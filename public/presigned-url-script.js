@@ -1,5 +1,6 @@
 const formElement = document.querySelector("#form-action");
 const fileInput = document.querySelector("#formFile");
+const submitButton = document.querySelector("#form-submit-button");
 
 formElement?.addEventListener("submit", async (evt) => {
 	evt.preventDefault();
@@ -8,6 +9,7 @@ formElement?.addEventListener("submit", async (evt) => {
 	if (!file) {
 		return alert("A file must be selected");
 	}
+	submitButton.disabled = true;
 
 	const extension = file.name.split(".").pop();
 
