@@ -39,7 +39,7 @@
 							<% for (const file of files) { %>
 							<tr>
 								<td scope="row"><%- file.id %></td>
-								<td><a href="/storage/<%- file.referenceId %>" target="_blank"><%- file.name %></a></td>
+								<td><a href="/storage/<%- file.fileReferenceId %>" target="_blank"><%- file.name %></a></td>
 								<td><button class="btn btn-danger btn-sm">Delete</button></td>
 							</tr>
 							<% }; %>

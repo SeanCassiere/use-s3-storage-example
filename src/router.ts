@@ -57,19 +57,44 @@ router.post("/api/presigned-upload-url", cookieJwtAuth, async (req: TypedRequest
 		return;
 	}
 
+	await prisma.file.create({
+		data: {
+			userId: user.id,
+			name: response.storageKey.split("/")[1],
+			fileReferenceId: response.storageKey,
+			provider: "AWS",
+		},
+	});
+
 	return res.json({ url: response.url, storageKey: response.storageKey });
 });
 router.put("/api/confirm-upload", cookieJwtAuth, async (req: TypedRequest, res) => {
 	const body = confirmClientUploadSchema.safeParse(req.body);
-	const user = req.user!;
 
 	if (!body.success) {
 		res.status(400).send(body.error);
 		return;
 	}
 	const data = body.data;
-	console.log("uploaded storage key", data.storageKey);
+	await prisma.file.update({
+		where: {
+			fileReferenceId: data.storageKey,
+		},
+		data: {
+			isActive: true,
+		},
+	});
 	res.status(200).send(data.storageKey);
+});
+
+router.route("/files/presigned-url").get(cookieJwtAuth, async (req: TypedRequest, res) => {
+	if (!req.user) {
+		return res.redirect("/");
+	}
+
+	return res.render("pages/presigned-url", {
+		user: req.user,
+	});
 });
 
 router
@@ -92,7 +117,16 @@ router
 
 		try {
 			const data = await uploadS3File(req.user.id, file);
-			console.log("uploaded file", data);
+			const fileName = data.Key.split("/")[1];
+			await prisma.file.create({
+				data: {
+					name: fileName,
+					provider: "AWS",
+					fileReferenceId: data.Key,
+					isActive: true,
+					userId: req.user.id,
+				},
+			});
 		} catch (error) {
 			console.log("upload failed", error);
 		}
@@ -105,16 +139,6 @@ router
 		return res.redirect("/files");
 	});
 
-router.route("/files/presigned-url").get(cookieJwtAuth, async (req: TypedRequest, res) => {
-	if (!req.user) {
-		return res.redirect("/");
-	}
-
-	return res.render("pages/presigned-url", {
-		user: req.user,
-	});
-});
-
 router.route("/storage/:userId/:storageKey").get(async (req, res) => {
 	const userId = req.params.userId;
 	const storageKey = req.params.storageKey;
@@ -124,15 +148,22 @@ router.route("/storage/:userId/:storageKey").get(async (req, res) => {
 	readStream.pipe(res);
 });
 
-router.route("/files").get(cookieJwtAuth, (req: TypedRequest, res) => {
+router.route("/files").get(cookieJwtAuth, async (req: TypedRequest, res) => {
 	if (req.user === null) {
 		// console.log("User not found");
 		return res.redirect("/");
 	}
 
+	const files = await prisma.file.findMany({
+		where: {
+			userId: req.user?.id,
+			isActive: true,
+		},
+	});
+
 	return res.render("pages/files", {
 		user: req.user ?? null,
-		files: [],
+		files: files,
 	});
 });
 
