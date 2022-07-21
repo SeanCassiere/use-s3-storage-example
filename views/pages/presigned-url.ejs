@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<%- include('../partials/head'); %>
+		<script src="/presigned-url-script.js" defer></script>
+	</head>
+	<body class="container">
+		<header><%- include('../partials/header', { user }); %></header>
+
+		<main>
+			<div class="row">
+				<div class="col-sm-5">
+					<div class="jumbotron">
+						<h1>Upload via Presigned-URL</h1>
+						<p>
+							In this example, once submitted the client will ask for a pre-signed URL from the server, then submit the
+							file directly to S3 via the returned endpoint.
+						</p>
+					</div>
+				</div>
+
+				<div class="col-sm-7">
+					<div class="well">
+						<form id="form-action" style="display: flex; flex-direction: column; gap: 0.5rem">
+							<div class="mb-3">
+								<label for="formFile" class="form-label">Select your file</label>
+								<input class="form-control" type="file" name="file" id="formFile" accept="image/*" required />
+							</div>
+							<button type="submit" class="btn btn-success">Upload</button>
+						</form>
+					</div>
+				</div>
+			</div>
+		</main>
+
+		<footer><%- include('../partials/footer'); %></footer>
+	</body>
+</html>

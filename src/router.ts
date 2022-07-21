@@ -5,18 +5,24 @@ import { Router } from "express";
 import { z } from "zod";
 import { sign } from "jsonwebtoken";
 
-import { cookieJwtAuth, cookieJwtScan, TypedRequest } from "./middlewares/cookieJwt";
+import { cookieJwtAuth, cookieJwtScan, COOKIE_KEY, TypedRequest } from "./middlewares/cookieJwt";
 import { env } from "./config/env";
 import { prisma } from "./config/prisma";
-import { getS3FileStream, s3FormStorageKey, uploadS3File } from "./config/s3";
+import { getS3FileStream, getS3PresignedUploadUrl, s3FormStorageKey, uploadS3File } from "./config/s3";
 
 const unlinkFile = util.promisify(fs.unlink);
 const upload = multer({ dest: "upload/" });
 
-export const router = Router();
-
 const loginSchema = z.object({
 	username: z.string(),
+});
+
+const requestPresignedUrlSchema = z.object({
+	extension: z.string(),
+});
+
+const confirmClientUploadSchema = z.object({
+	storageKey: z.string(),
 });
 
 async function getUser(username: string) {
@@ -29,6 +35,42 @@ async function getUser(username: string) {
 		},
 	});
 }
+
+export const router = Router();
+
+router.post("/api/presigned-upload-url", cookieJwtAuth, async (req: TypedRequest, res) => {
+	const body = requestPresignedUrlSchema.safeParse(req.body);
+	const user = req.user!;
+	if (!body.success) {
+		res.status(400).send(body.error);
+		return;
+	}
+
+	const data = body.data;
+
+	const response = await getS3PresignedUploadUrl(user.id, data.extension).catch((err) => {
+		console.log(err);
+	});
+
+	if (!response) {
+		res.status(500).send("Internal Server Error");
+		return;
+	}
+
+	return res.json({ url: response.url, storageKey: response.storageKey });
+});
+router.put("/api/confirm-upload", cookieJwtAuth, async (req: TypedRequest, res) => {
+	const body = confirmClientUploadSchema.safeParse(req.body);
+	const user = req.user!;
+
+	if (!body.success) {
+		res.status(400).send(body.error);
+		return;
+	}
+	const data = body.data;
+	console.log("uploaded storage key", data.storageKey);
+	res.status(200).send(data.storageKey);
+});
 
 router
 	.route("/files/proxy-upload")
@@ -63,6 +105,16 @@ router
 		return res.redirect("/files");
 	});
 
+router.route("/files/presigned-url").get(cookieJwtAuth, async (req: TypedRequest, res) => {
+	if (!req.user) {
+		return res.redirect("/");
+	}
+
+	return res.render("pages/presigned-url", {
+		user: req.user,
+	});
+});
+
 router.route("/storage/:userId/:storageKey").get(async (req, res) => {
 	const userId = req.params.userId;
 	const storageKey = req.params.storageKey;
@@ -85,7 +137,7 @@ router.route("/files").get(cookieJwtAuth, (req: TypedRequest, res) => {
 });
 
 router.get("/logout", (_, res) => {
-	res.clearCookie("access-token").redirect("/");
+	res.clearCookie(COOKIE_KEY).redirect("/");
 });
 
 router
@@ -116,6 +168,6 @@ router
 			expiresIn: "30d",
 		});
 
-		res.cookie("access-token", accessToken, { httpOnly: true });
+		res.cookie(COOKIE_KEY, accessToken, { httpOnly: true });
 		return res.redirect("/files");
 	});
