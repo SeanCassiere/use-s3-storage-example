@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
 import { sign } from "jsonwebtoken";
-import { cookieJwtAuth, cookieJwtScan, TypedRequest } from "../middlewares/cookieJwt";
+import { cookieJwtScan, TypedRequest } from "../middlewares/cookieJwt";
 import { env } from "../config/env";
+import { prisma } from "../config/prisma";
 
 export const pagesRouter = Router();
 
@@ -11,11 +12,14 @@ const loginSchema = z.object({
 });
 
 async function getUser(username: string) {
-	return {
-		id: "d29e08e4-543c-4d8c-a822-f46700d654b4",
-		username,
-		password: "123456",
-	};
+	return await prisma.user.findFirst({
+		where: {
+			username: {
+				equals: username.toLowerCase(),
+				mode: "insensitive",
+			},
+		},
+	});
 }
 
 pagesRouter.route("/").get(cookieJwtScan, (req: TypedRequest, res) => {
@@ -50,6 +54,10 @@ pagesRouter
 		}
 		const data = body.data;
 		const user = await getUser(data.username);
+		if (!user) {
+			return res.redirect("/login");
+		}
+
 		const accessToken = sign(user, env.JWT_SECRET, {
 			subject: user.id,
 			expiresIn: "30d",
