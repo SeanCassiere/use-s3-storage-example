@@ -89,3 +89,7 @@ export async function getS3PresignedViewUrl(storageKey: string) {
 		url: await s3.getSignedUrlPromise("putObject", { Bucket: env.AWS_BUCKET_NAME, Key: storageKey }),
 	};
 }
+
+export async function deleteS3Object(storageKey: string) {
+	return await s3.deleteObject({ Bucket: env.AWS_BUCKET_NAME, Key: storageKey }).promise();
+}

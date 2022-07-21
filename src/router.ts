@@ -8,7 +8,7 @@ import { sign } from "jsonwebtoken";
 import { cookieJwtAuth, cookieJwtScan, COOKIE_KEY, TypedRequest } from "./middlewares/cookieJwt";
 import { env } from "./config/env";
 import { prisma } from "./config/prisma";
-import { getS3FileStream, getS3PresignedUploadUrl, s3FormStorageKey, uploadS3File } from "./config/s3";
+import { deleteS3Object, getS3FileStream, getS3PresignedUploadUrl, s3FormStorageKey, uploadS3File } from "./config/s3";
 
 const unlinkFile = util.promisify(fs.unlink);
 const upload = multer({ dest: "upload/" });
@@ -95,6 +95,38 @@ router.route("/files/presigned-url").get(cookieJwtAuth, async (req: TypedRequest
 	return res.render("pages/presigned-url", {
 		user: req.user,
 	});
+});
+
+router.post("/files/delete/:dbId", cookieJwtAuth, async (req: TypedRequest, res) => {
+	const user = req.user!;
+	const dbId = req.params.dbId;
+	const file = await prisma.file.findFirst({
+		where: {
+			id: {
+				equals: dbId,
+			},
+			userId: {
+				equals: user.id,
+			},
+		},
+	});
+	if (!file) {
+		res.status(404).send("File not found");
+		return;
+	}
+	try {
+		await deleteS3Object(file.fileReferenceId);
+
+		await prisma.file.delete({
+			where: {
+				id: file.id,
+			},
+		});
+	} catch (error) {
+		res.status(500).send("Something went wrong during deletion");
+		return;
+	}
+	res.status(200).redirect("/files");
 });
 
 router

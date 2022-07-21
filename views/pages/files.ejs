@@ -40,7 +40,11 @@
 							<tr>
 								<td scope="row"><%- file.id %></td>
 								<td><a href="/storage/<%- file.fileReferenceId %>" target="_blank"><%- file.name %></a></td>
-								<td><button class="btn btn-danger btn-sm">Delete</button></td>
+								<td>
+									<form method="POST" action="/files/delete/<%- file.id %>">
+										<button type="submit" class="btn btn-danger btn-sm">Delete</button>
+									</form>
+								</td>
 							</tr>
 							<% }; %>
 						</tbody>
