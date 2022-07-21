@@ -12,7 +12,7 @@ const server = createServer(app);
 app.set("view engine", "ejs");
 app.use(cookieParser(env.COOKIE_SECRET));
 app.use(express.static("public"));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 app.get("/health", (_, res) => res.send({ status: "OK", uptime: process.uptime() }));

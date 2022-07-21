@@ -9,6 +9,10 @@ const envSchema = z.object({
 	DATABASE_URL: z.string(),
 	JWT_SECRET: z.string(),
 	COOKIE_SECRET: z.string(),
+	AWS_BUCKET_NAME: z.string(),
+	AWS_BUCKET_REGION: z.string(),
+	AWS_ACCESS_KEY: z.string(),
+	AWS_SECRET_KEY: z.string(),
 });
 
 const envData = envSchema.safeParse(process.env);

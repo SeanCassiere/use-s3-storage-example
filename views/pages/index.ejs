@@ -7,21 +7,26 @@
 		<header><%- include('../partials/header', { user }); %></header>
 
 		<main>
-			<div class="jumbotron">
-				<h1>This is great</h1>
-				<p>Welcome to templating using EJS</p>
+			<div class="row">
+				<div class="col-sm-8">
+					<div class="jumbotron">
+						<h1>Login</h1>
+						<p>Sign in to this demo application using S3</p>
+					</div>
+				</div>
 
-				<h2>Variable</h2>
-				<p><%= tagline %></p>
-
-				<ul>
-					<% mascots.forEach(function(mascot) { %>
-					<li>
-						<strong><%= mascot.name %></strong>
-						representing <%= mascot.organization %>, born <%= mascot.birth_year %>
-					</li>
-					<% }); %>
-				</ul>
+				<div class="col-sm-4">
+					<div class="well">
+						<h3>Sign in form!</h3>
+						<form method="post" style="display: flex; flex-direction: column; gap: 0.5rem">
+							<div class="mb-3">
+								<label for="username" class="form-label">Username</label>
+								<input type="text" class="form-control" name="username" id="username" required value="admin" />
+							</div>
+							<button type="submit" class="btn btn-success">Login</button>
+						</form>
+					</div>
+				</div>
 			</div>
 		</main>
 

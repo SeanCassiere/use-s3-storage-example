@@ -10,7 +10,7 @@ export interface TypedRequest extends Request {
 }
 
 export const cookieJwtAuth = (req: TypedRequest, res: Response, next: NextFunction) => {
-	const token = req.cookies["access-token"];
+	const token = req.cookies["access-token"] ?? "";
 	try {
 		const user = jwt.verify(token, env.JWT_SECRET) as any;
 		req.user = user;
@@ -22,13 +22,12 @@ export const cookieJwtAuth = (req: TypedRequest, res: Response, next: NextFuncti
 };
 
 export const cookieJwtScan = (req: TypedRequest, res: Response, next: NextFunction) => {
-	const token = req.cookies["access-token"];
+	const token = req.cookies["access-token"] ?? "";
 	try {
 		const user = jwt.verify(token, env.JWT_SECRET) as any;
 		req.user = user;
-		next();
 	} catch (err) {
 		req.user == null;
-		next();
 	}
+	next();
 };
