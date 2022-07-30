@@ -1,6 +1,4 @@
-import multer from "multer";
-import fs from "fs";
-import util from "util";
+import multer, {memoryStorage} from "multer";
 import { Router } from "express";
 import { z } from "zod";
 import { sign } from "jsonwebtoken";
@@ -10,8 +8,8 @@ import { env } from "./config/env";
 import { prisma } from "./config/prisma";
 import { deleteS3Object, getS3FileStream, getS3PresignedUploadUrl, s3FormStorageKey, uploadS3File } from "./config/s3";
 
-const unlinkFile = util.promisify(fs.unlink);
-const upload = multer({ dest: "upload/" });
+const memStorage = memoryStorage()
+const upload = multer({ storage: memStorage });
 
 const loginSchema = z.object({
 	username: z.string(),
@@ -162,12 +160,7 @@ router
 		} catch (error) {
 			console.log("upload failed", error);
 		}
-
-		try {
-			await unlinkFile(file.path);
-		} catch (error) {
-			console.log("error unlinking file", error);
-		}
+		
 		return res.redirect("/files");
 	});
 
